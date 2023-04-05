@@ -4,7 +4,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"github.com/Nik-U/pbc"
-	"github.com/wjfn/DecentralizedABE2020/model/AES"
+	"github.com/vangogo/DecentralizedABE/model/AES"
 )
 
 type DABE struct {

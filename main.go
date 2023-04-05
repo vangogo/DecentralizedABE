@@ -2,7 +2,7 @@ package DecentralizedABE2020
 
 import (
 	"fmt"
-	DecentralizedABE "github.com/wjfn/DecentralizedABE2020/model"
+	DecentralizedABE "github.com/vangogo/DecentralizedABE/model"
 )
 
 func main() {
