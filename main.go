@@ -2,6 +2,7 @@ package DecentralizedABE2020
 
 import (
 	"fmt"
+	"github.com/Nik-U/pbc"
 	DecentralizedABE "github.com/vangogo/DecentralizedABE/model"
 )
 
