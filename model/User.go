@@ -82,6 +82,7 @@ func (u *User) GenerateOrgShare(n, t int, userNames map[string]*pbc.Element, org
 		N:           n,
 		T:           t,
 		OthersShare: make([]*pbc.Element, 0, 0),
+		Share:       make(map[string]*pbc.Element),
 	}
 	opkPart := &OPKPart{
 		APKMap: make(map[string]*pbc.Element),
@@ -93,6 +94,7 @@ func (u *User) GenerateOrgShare(n, t int, userNames map[string]*pbc.Element, org
 	for name, hGID := range userNames {
 		shares[name] = u.share(hGID, d, n, t, f)
 	}
+	oskPart.Share = shares
 	return shares, nil
 }
 
@@ -126,6 +128,7 @@ func (u *User) GenerateOrgAttrShare(n, t int, org *Org, d *DABE, attrName string
 	for name, hGID := range org.UserName2GID {
 		shares[name] = u.share(hGID, d, n, t, f)
 	}
+	askPart.Share = shares
 	return shares, nil
 }
 

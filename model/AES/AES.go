@@ -1,9 +1,9 @@
 package AES
 
 import (
-	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
+	"bytes"
 	"fmt"
 )
 
@@ -13,12 +13,12 @@ func AesEncrypt(origData, key []byte) ([]byte, error) {
 		return nil, err
 	}
 	blockSize := block.BlockSize()
-	origData = PKCS5Padding(origData, blockSize)
-	// origData = ZeroPadding(origData, block.BlockSize())
+	//origData = PKCS5Padding(origData, blockSize)
+	origData = ZeroPadding(origData, block.BlockSize())
 	blockMode := cipher.NewCBCEncrypter(block, key[:blockSize])
-	crypted := make([]byte, len(origData))
+	//crypted := make([]byte, len(origData))
 	// 根据CryptBlocks方法的说明，如下方式初始化crypted也可以
-	// crypted := origData
+	crypted := origData
 	blockMode.CryptBlocks(crypted, origData)
 	return crypted, nil
 }
@@ -28,26 +28,33 @@ func AesDecrypt(crypted, key []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	//fmt.Println("AesDecrypt--- after newcipher")
 	blockSize := block.BlockSize()
 	blockMode := cipher.NewCBCDecrypter(block, key[:blockSize])
-	origData := make([]byte, len(crypted))
-	// origData := crypted
+	//origData := make([]byte, len(crypted))
+	origData := crypted
 	blockMode.CryptBlocks(origData, crypted)
-	origData = PKCS5UnPadding(origData)
-	// origData = ZeroUnPadding(origData)
+	//origData = PKCS5UnPadding(origData)
+	origData = ZeroUnPadding(origData)
 	return origData, nil
 }
 
+
 func ZeroPadding(ciphertext []byte, blockSize int) []byte {
 	padding := blockSize - len(ciphertext)%blockSize
-	padtext := bytes.Repeat([]byte{0}, padding)
+	//padtext := bytes.Repeat([]byte{0}, padding)
+	padtext := bytes.Repeat([]byte{byte(padding)}, padding)
 	return append(ciphertext, padtext...)
 }
 
 func ZeroUnPadding(origData []byte) []byte {
 	length := len(origData)
 	unpadding := int(origData[length-1])
-	return origData[:(length - unpadding)]
+	if(unpadding>=length){
+		return origData
+	}else{
+		return origData[:(length - unpadding)]
+	}
 }
 
 func PKCS5Padding(ciphertext []byte, blockSize int) []byte {
@@ -60,10 +67,10 @@ func PKCS5UnPadding(origData []byte) []byte {
 	length := len(origData)
 	// 去掉最后一个字节 unpadding 次
 	unpadding := int(origData[length-1])
-	if unpadding >= length {
+	if unpadding>=length {
 		fmt.Printf("wrong SK.Decrypt failed.\n")
 		return nil
-	} else {
+	}else{
 		return origData[:(length - unpadding)]
 	}
 }

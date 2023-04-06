@@ -2,6 +2,7 @@ package DecentralizedABE
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"github.com/Nik-U/pbc"
 	"github.com/vangogo/DecentralizedABE/model/AES"
@@ -17,17 +18,19 @@ func (d *DABE) GlobalSetup() {
 	fmt.Println("DABE GlobalSetup start")
 	d.CurveParam = new(CurveParam)
 	d.CurveParam.Initialize()
-	d.G = d.CurveParam.GetNewG1()
-	d.EGG = d.CurveParam.GetNewGT().Pair(d.G, d.G)
+	bytes, _ := hex.DecodeString("34b2bc99a307591a4da995523754cc2bca96db9671736834d0c6160051380572277f24a106ae0853cfe7445d887378e2cf2ca18407d3749592a9df988a8f38608721fb8699baa94708aee1b989c3a92cd0217a693a5395db7835a396d848e09e47d5")
+	d.G = d.CurveParam.Get0FromG1().SetBytes(bytes)
+	//d.G = d.CurveParam.GetNewG1()
+	d.EGG = d.CurveParam.Get1FromGT().Pair(d.G, d.G)
 	fmt.Println("DABE GlobalSetup success")
 }
 
 func (d *DABE) UserSetup(name string) *User {
-	fmt.Println("DABE UserSetup start")
+	//fmt.Println("DABE UserSetup start")
 	alpha := d.CurveParam.GetNewZn()
 	eGGAlpha := d.EGG.NewFieldElement().PowZn(d.EGG, alpha)
 	gAlpha := d.G.NewFieldElement().PowZn(d.G, alpha)
-	fmt.Printf("DABE UserSetup success for %s\n", name)
+	//fmt.Printf("DABE UserSetup success for %s\n", name)
 	return &User{
 		APKMap:   make(map[string]*APK),
 		ASKMap:   make(map[string]*ASK),
@@ -68,6 +71,7 @@ func (d *DABE) OrgSetup(n, t int, name string, userNames []string) (*Org, error)
 func (d *DABE) Encrypt(m string, uPolicy string, authorities map[string]Authority) (*Cipher, error) {
 	fmt.Println("DABE Encrypt start")
 	aesKey := d.EGG.NewFieldElement().Rand()
+	//fmt.Println("aesKey before encrypt: "+aesKey.String())
 	aesCipherText, err := AES.AesEncrypt([]byte(m), (aesKey.Bytes())[0:32])
 	if err != nil {
 		return nil, fmt.Errorf("AES encrypt error\n")
@@ -103,6 +107,7 @@ func (d *DABE) Encrypt(m string, uPolicy string, authorities map[string]Authorit
 			return nil, fmt.Errorf("authority not found, error when %s", attrStr)
 		}
 		authority := authorities[authorityName]
+		//fmt.Println("attrStr: %s",attrStr)
 		pk := authority.GetAPKMap()[attrStr]
 		if pk == nil {
 			return nil, fmt.Errorf("pk not found, error when %s", attrStr)
@@ -184,11 +189,12 @@ func (d *DABE) Decrypt(cipher *Cipher, privateKeys map[string]*pbc.Element, gid 
 	if len(aesKey.Bytes()) <= 32 {
 		return nil, fmt.Errorf("invalid aeskey:: decrypt failed.\n")
 	}
+	//fmt.Println("aesKey after decrypt: "+aesKey.String())
 	M, err := AES.AesDecrypt(cipher.CipherText, (aesKey.Bytes())[0:32])
 	if err != nil || M == nil {
 		return nil, fmt.Errorf("aes error:: decrypt failed.\n")
 	}
-	fmt.Println("DABE Decrypt success")
+	fmt.Println("DABE Decrypt success,plain text: " + string(M))
 	return M, nil
 }
 
