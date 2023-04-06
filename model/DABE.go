@@ -1,11 +1,14 @@
 package DecentralizedABE
 
 import (
+	"bytes"
+	"crypto/cipher"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"github.com/Nik-U/pbc"
-	"github.com/vangogo/DecentralizedABE/model/AES"
+	"github.com/vangogo/DecentralizedABE/model/sm4"
+	"github.com/vangogo/DecentralizedABE/model/sm4/padding"
 )
 
 type DABE struct {
@@ -68,14 +71,38 @@ func (d *DABE) OrgSetup(n, t int, name string, userNames []string) (*Org, error)
 	}, nil
 }
 
-func (d *DABE) Encrypt(m string, uPolicy string, authorities map[string]Authority) (*Cipher, error) {
+func (d *DABE) Encrypt(m string, uPolicy string, authorities map[string]Authority) (*CipherSM4, error) {
 	fmt.Println("DABE Encrypt start")
-	aesKey := d.EGG.NewFieldElement().Rand()
-	//fmt.Println("aesKey before encrypt: "+aesKey.String())
-	aesCipherText, err := AES.AesEncrypt([]byte(m), (aesKey.Bytes())[0:32])
+	//aesKey := d.EGG.NewFieldElement().Rand()
+	////fmt.Println("aesKey before encrypt: "+aesKey.String())
+	//aesCipherText, err := AES.AesEncrypt([]byte(m), (aesKey.Bytes())[0:32])
+	//if err != nil {
+	//	return nil, fmt.Errorf("AES encrypt error\n")
+	//}
+
+	srcIn := bytes.NewBuffer([]byte(m))
+	encOut := bytes.NewBuffer(make([]byte, 0, 1024))
+
+	//key := make([]byte, 16)
+	//iv := make([]byte, 16)
+	//_, _ = rand.Read(key)
+	//_, _ = rand.Read(iv)
+	key := d.EGG.NewFieldElement().Rand()
+	iv := d.EGG.NewFieldElement().Rand()
+	fmt.Println(key.String())
+	fmt.Println(iv.String())
+	block, err := sm4.NewCipher(key.Bytes()[0:32])
 	if err != nil {
-		return nil, fmt.Errorf("AES encrypt error\n")
+		panic(err)
 	}
+	encrypter := cipher.NewCBCEncrypter(block, iv.Bytes()[0:32])
+	// P7填充的CBC加密
+	err = padding.P7BlockEnc(encrypter, srcIn, encOut)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("原文: %02X\n", srcIn.Bytes())
+	fmt.Printf("加密: %02X\n", encOut.Bytes())
 
 	policy := new(Policy)
 	d.growNewPolicy(uPolicy, d.CurveParam.GetNewZn(), policy)
@@ -90,7 +117,9 @@ func (d *DABE) Encrypt(m string, uPolicy string, authorities map[string]Authorit
 	s := d.CurveParam.GetNewZn()
 
 	// c0 = M * e(g,g)^s
-	c0 := aesKey.Mul(aesKey, d.EGG.NewFieldElement().PowZn(d.EGG, s))
+	//c0 := aesKey.Mul(aesKey, d.EGG.NewFieldElement().PowZn(d.EGG, s))
+	c01 := key.Mul(key, d.EGG.NewFieldElement().PowZn(d.EGG, s))
+	c02 := iv.Mul(iv, d.EGG.NewFieldElement().PowZn(d.EGG, s))
 	//generate v and w
 	v[0] = s
 	w[0] = s.NewFieldElement().Set0()
@@ -137,22 +166,23 @@ func (d *DABE) Encrypt(m string, uPolicy string, authorities map[string]Authorit
 		c3s[i] = c3
 	}
 	fmt.Println("DABE Encrypt success")
-	return &Cipher{
-		C0:         c0,
+	return &CipherSM4{
+		C01:        c01,
+		C02:        c02,
 		C1s:        c1s,
 		C2s:        c2s,
 		C3s:        c3s,
-		CipherText: aesCipherText,
+		CipherText: encOut.Bytes(),
 		Policy:     uPolicy,
 	}, nil
 }
 
-func (d *DABE) Decrypt(cipher *Cipher, privateKeys map[string]*pbc.Element, gid string) ([]byte, error) {
+func (d *DABE) Decrypt(cipherS *CipherSM4, privateKeys map[string]*pbc.Element, gid string) ([]byte, error) {
 	fmt.Println("DABE Decrypt start")
 	hashGid := d.CurveParam.GetG1FromStringHash(gid, sha256.New())
 
 	policy := new(Policy)
-	d.growNewPolicy(cipher.Policy, d.CurveParam.GetNewZn(), policy)
+	d.growNewPolicy(cipherS.Policy, d.CurveParam.GetNewZn(), policy)
 	n := len(policy.AccessStruct.LsssMatrix) - 1
 	attrs := make([]string, 0, 0)
 	for key, _ := range privateKeys {
@@ -173,29 +203,54 @@ func (d *DABE) Decrypt(cipher *Cipher, privateKeys map[string]*pbc.Element, gid 
 		//attr
 		attrStr := policy.AccessStruct.PolicyMaps[i+1]
 		// c1 * e(HGID,c3)
-		temp := d.EGG.NewFieldElement().Pair(hashGid, cipher.C3s[i]).ThenMul(cipher.C1s[i])
+		temp := d.EGG.NewFieldElement().Pair(hashGid, cipherS.C3s[i]).ThenMul(cipherS.C1s[i])
 		// e(key, c2)
-		temp2 := d.EGG.NewFieldElement().Pair(privateKeys[attrStr], cipher.C2s[i])
+		temp2 := d.EGG.NewFieldElement().Pair(privateKeys[attrStr], cipherS.C2s[i])
 		// (c1 * e(HGID,c3) / e(key, c2)) ^ cx
 		temp.ThenDiv(temp2)
 		temp.ThenPowZn(cxs[i+1])
 		// 累×
 		result.ThenMul(temp)
 	}
-	aesKey := d.EGG.NewFieldElement().Set(cipher.C0).ThenDiv(result)
-	if aesKey == nil {
+	//aesKey := d.EGG.NewFieldElement().Set(cipherS.C0).ThenDiv(result)
+	//if aesKey == nil {
+	//	return nil, fmt.Errorf("User policy not match,decrypt failed.\n")
+	//}
+	//if len(aesKey.Bytes()) <= 32 {
+	//	return nil, fmt.Errorf("invalid aeskey:: decrypt failed.\n")
+	//}
+	////fmt.Println("aesKey after decrypt: "+aesKey.String())
+	//M, err := AES.AesDecrypt(cipherS.CipherText, (aesKey.Bytes())[0:32])
+	//if err != nil || M == nil {
+	//	return nil, fmt.Errorf("aes error:: decrypt failed.\n")
+	//}
+	key := d.EGG.NewFieldElement().Set(cipherS.C01).ThenDiv(result)
+	if key == nil {
 		return nil, fmt.Errorf("User policy not match,decrypt failed.\n")
 	}
-	if len(aesKey.Bytes()) <= 32 {
+	if len(key.Bytes()) <= 32 {
+		return nil, fmt.Errorf("invalid SM4key:: decrypt failed.\n")
+	}
+	iv := d.EGG.NewFieldElement().Set(cipherS.C02).ThenDiv(result)
+	if iv == nil {
+		return nil, fmt.Errorf("User policy not match,decrypt failed.\n")
+	}
+	if len(iv.Bytes()) <= 32 {
 		return nil, fmt.Errorf("invalid aeskey:: decrypt failed.\n")
 	}
-	//fmt.Println("aesKey after decrypt: "+aesKey.String())
-	M, err := AES.AesDecrypt(cipher.CipherText, (aesKey.Bytes())[0:32])
-	if err != nil || M == nil {
-		return nil, fmt.Errorf("aes error:: decrypt failed.\n")
+	block, err := sm4.NewCipher(key.Bytes()[0:32])
+	if err != nil {
+		panic(err)
 	}
-	fmt.Println("DABE Decrypt success,plain text: " + string(M))
-	return M, nil
+	cipherReader := bytes.NewReader(cipherS.CipherText)
+	decrypter := cipher.NewCBCDecrypter(block, iv.Bytes()[0:32])
+	decOut := bytes.NewBuffer(make([]byte, 0, 1024))
+	err = padding.P7BlockDecrypt(decrypter, cipherReader, decOut)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("DABE Decrypt success,plain text: " + string(decOut.Bytes()))
+	return decOut.Bytes(), nil
 }
 
 func (d *DABE) genCoefficient(attrs []string, policy *Policy) ([]*pbc.Element, error) {
