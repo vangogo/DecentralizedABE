@@ -104,7 +104,7 @@ func (d *DABE) Encrypt(m string, uPolicy string, authorities map[string]Authorit
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("原文: %02X\n", srcIn.Bytes())
+	fmt.Printf("原文: %02X\n", []byte(m))
 	fmt.Printf("加密: %02X\n", encOut.Bytes())
 
 	policy := new(Policy)
@@ -234,6 +234,7 @@ func (d *DABE) Decrypt(cipherS *CipherSM4, privateKeys map[string]*pbc.Element, 
 	if len(key.Bytes()) <= 32 {
 		return nil, fmt.Errorf("invalid SM4key:: decrypt failed.\n")
 	}
+	fmt.Println(key.String())
 	iv := d.EGG.NewFieldElement().Set(cipherS.C02).ThenDiv(result)
 	if iv == nil {
 		return nil, fmt.Errorf("User policy not match,decrypt failed.\n")
@@ -241,10 +242,12 @@ func (d *DABE) Decrypt(cipherS *CipherSM4, privateKeys map[string]*pbc.Element, 
 	if len(iv.Bytes()) <= 32 {
 		return nil, fmt.Errorf("invalid aeskey:: decrypt failed.\n")
 	}
+	fmt.Println(iv.String())
 	block, err := sm4.NewCipher(key.Bytes()[0:32])
 	if err != nil {
 		panic(err)
 	}
+	fmt.Println(block)
 	cipherReader := bytes.NewReader(cipherS.CipherText)
 	decrypter := cipher.NewCBCDecrypter(block, iv.Bytes()[0:32])
 	decOut := bytes.NewBuffer(make([]byte, 0, 1024))
