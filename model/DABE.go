@@ -253,7 +253,7 @@ func (d *DABE) Decrypt(cipherS *CipherSM4, privateKeys map[string]*pbc.Element, 
 	decOut := bytes.NewBuffer(make([]byte, 0, 1024))
 	err = padding.P7BlockDecrypt(decrypter, cipherReader, decOut)
 	if err != nil {
-		fmt.Println(err)
+		panic(err)
 	}
 	fmt.Println("DABE Decrypt success,plain text: " + string(decOut.Bytes()))
 	return decOut.Bytes(), nil
