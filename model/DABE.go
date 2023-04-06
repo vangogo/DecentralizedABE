@@ -79,9 +79,12 @@ func (d *DABE) Encrypt(m string, uPolicy string, authorities map[string]Authorit
 	//if err != nil {
 	//	return nil, fmt.Errorf("AES encrypt error\n")
 	//}
+	fmt.Println(m)
 
 	srcIn := bytes.NewBuffer([]byte(m))
 	encOut := bytes.NewBuffer(make([]byte, 0, 1024))
+
+	fmt.Println(srcIn)
 
 	//key := make([]byte, 16)
 	//iv := make([]byte, 16)
