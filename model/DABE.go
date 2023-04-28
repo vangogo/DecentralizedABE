@@ -79,12 +79,12 @@ func (d *DABE) Encrypt(m string, uPolicy string, authorities map[string]Authorit
 	//if err != nil {
 	//	return nil, fmt.Errorf("AES encrypt error\n")
 	//}
-	fmt.Println(m)
+	//fmt.Println(m)
 
 	srcIn := bytes.NewBuffer([]byte(m))
 	encOut := bytes.NewBuffer(make([]byte, 0, 1024))
 
-	fmt.Println(srcIn)
+	//fmt.Println(srcIn)
 
 	//key := make([]byte, 16)
 	//iv := make([]byte, 16)
@@ -92,8 +92,8 @@ func (d *DABE) Encrypt(m string, uPolicy string, authorities map[string]Authorit
 	//_, _ = rand.Read(iv)
 	key := d.EGG.NewFieldElement().Rand()
 	iv := d.EGG.NewFieldElement().Rand()
-	fmt.Println(key.String())
-	fmt.Println(iv.String())
+	//fmt.Println(key.String())
+	//fmt.Println(iv.String())
 	block, err := sm4.NewCipher(key.Bytes()[0:16])
 	if err != nil {
 		panic(err)
@@ -104,8 +104,8 @@ func (d *DABE) Encrypt(m string, uPolicy string, authorities map[string]Authorit
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("原文: %02X\n", []byte(m))
-	fmt.Printf("加密: %02X\n", encOut.Bytes())
+	//fmt.Printf("原文: %02X\n", []byte(m))
+	//fmt.Printf("加密: %02X\n", encOut.Bytes())
 
 	policy := new(Policy)
 	d.growNewPolicy(uPolicy, d.CurveParam.GetNewZn(), policy)
