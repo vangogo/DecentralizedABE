@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"log"
 )
 
 /* <Policy Parser SECTION */
@@ -16,13 +17,13 @@ func ParsePolicyStringToTree(s *string) (*PolicyNode, *AccessStruct) {
 	*s = strings.Replace(*s, "OR", "||", -1)
 	var num int = len(strings.Split(*s," "))
 	*s = strings.Replace(*s, " ", "", -1)
-	MainPolicy, ID := ParsePolicyString(AS, s, 0, len(*s)-1)
+	MainPolicy, ID := ParsePolicyString(AS, s, 0, len(*s)-1,num)
 	if ID == 0 {
 	} //non sense
 	return MainPolicy, AS
 }
 
-func ParsePolicyString(A *AccessStruct, s *string, startPos int, stopPos int) (*PolicyNode, int) {
+func ParsePolicyString(A *AccessStruct, s *string, startPos int, stopPos int,num int) (*PolicyNode, int) {
 	//leftPos := startPos+1+strings.Index((*s)[startPos+1:stopPos], "(")
 	log.Println(num)
 	this := NewPolicyNode("ThreshHold", 0)
