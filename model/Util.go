@@ -14,6 +14,7 @@ func ParsePolicyStringToTree(s *string) (*PolicyNode, *AccessStruct) {
 
 	*s = strings.Replace(*s, "AND", "&&", -1)
 	*s = strings.Replace(*s, "OR", "||", -1)
+	var num int = len(strings.Split(*s," "))
 	*s = strings.Replace(*s, " ", "", -1)
 	MainPolicy, ID := ParsePolicyString(AS, s, 0, len(*s)-1)
 	if ID == 0 {
@@ -23,7 +24,7 @@ func ParsePolicyStringToTree(s *string) (*PolicyNode, *AccessStruct) {
 
 func ParsePolicyString(A *AccessStruct, s *string, startPos int, stopPos int) (*PolicyNode, int) {
 	//leftPos := startPos+1+strings.Index((*s)[startPos+1:stopPos], "(")
-
+	log.Println(num)
 	this := NewPolicyNode("ThreshHold", 0)
 
 	A.A = append(A.A, make([]int, 2, 2))
@@ -74,7 +75,13 @@ func ParsePolicyString(A *AccessStruct, s *string, startPos int, stopPos int) (*
 		_n = n
 		this.SetOperation(1)
 	} else if strings.Index(trueChild, "||") != -1 {
-		childAttr = strings.Split(trueChild, "||")
+		fmt.Printf("in OR Gate\n")
+		if num==1 {
+			childAttr = strings.Split(trueChild," ")
+		} else {
+			childAttr = strings.Split(trueChild, "||")
+		}
+// 		childAttr = strings.Split(trueChild, "||")
 
 		for v := range childAttr {
 			if childAttr[v] != "" {
