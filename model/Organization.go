@@ -3,15 +3,17 @@ package DecentralizedABE
 import (
 	"fmt"
 	"github.com/Nik-U/pbc"
+	"github.com/vangogo/DecentralizedABE/model/SM"
 )
 
 type Org struct {
 	APKMap       map[string]*APK
 	EGGAlpha     *pbc.Element `field:"2"`
 	Name         string
-	N            int                                 //总用户个数
-	T            int                                 //门限阈值
+	N            int                     //总用户个数
+	T            int                     //门限阈值
 	UserName2GID map[string]*pbc.Element `field:"3"` //用户的名称
+	ThreholdPub  []byte
 }
 
 func (o *Org) GetPK() *pbc.Element {
@@ -93,4 +95,47 @@ func (o *Org) AssembleKeyPart(names []string, keyParts []*pbc.Element, d *DABE) 
 		key.ThenMul(d.CurveParam.Get0FromG1().PowZn(keyParts[i], up))
 	}
 	return key, nil
+}
+
+func (o *Org) ABC(names []string, pks []*pbc.Element, d *DABE) ([]byte, error) {
+	eGGAlpha1 := d.CurveParam.Get0FromZn()
+	for i := 0; i < o.T; i++ {
+		up := d.CurveParam.Get1FromZn()
+		for j := 0; j < o.T; j++ {
+			if i == j {
+				continue
+			}
+			temp := d.CurveParam.Get0FromZn().Sub(o.UserName2GID[names[j]], o.UserName2GID[names[i]])
+			temp = d.CurveParam.GetNewZn().Div(o.UserName2GID[names[j]], temp)
+			up.ThenMul(temp)
+		}
+		eGGAlpha1.ThenAdd(up.ThenMul(pks[i]))
+	}
+	_, pub, err := SM.GenerateKeyMen(eGGAlpha1.Bytes())
+	if err != nil {
+		return []byte{}, err
+	}
+	o.ThreholdPub = pub.GetRawBytes()
+	return pub.GetRawBytes(), nil
+}
+
+func (o *Org) DEF(names []string, pks []*pbc.Element, d *DABE) ([]byte, error) {
+	eGGAlpha1 := d.CurveParam.Get0FromZn()
+	for i := 0; i < o.T; i++ {
+		up := d.CurveParam.Get1FromZn()
+		for j := 0; j < o.T; j++ {
+			if i == j {
+				continue
+			}
+			temp := d.CurveParam.Get0FromZn().Sub(o.UserName2GID[names[j]], o.UserName2GID[names[i]])
+			temp = d.CurveParam.GetNewZn().Div(o.UserName2GID[names[j]], temp)
+			up.ThenMul(temp)
+		}
+		eGGAlpha1.ThenAdd(up.ThenMul(pks[i]))
+	}
+	priv, _, err := SM.GenerateKeyMen(eGGAlpha1.Bytes())
+	if err != nil {
+		return []byte{}, err
+	}
+	return priv.GetRawBytes(), nil
 }

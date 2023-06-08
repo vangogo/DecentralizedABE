@@ -2,9 +2,9 @@ package DecentralizedABE
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
-	"log"
 )
 
 /* <Policy Parser SECTION */
@@ -15,15 +15,15 @@ func ParsePolicyStringToTree(s *string) (*PolicyNode, *AccessStruct) {
 
 	*s = strings.Replace(*s, "AND", "&&", -1)
 	*s = strings.Replace(*s, "OR", "||", -1)
-	var num int = len(strings.Split(*s," "))
+	var num int = len(strings.Split(*s, " "))
 	*s = strings.Replace(*s, " ", "", -1)
-	MainPolicy, ID := ParsePolicyString1(AS, s, 0, len(*s)-1,num)
+	MainPolicy, ID := ParsePolicyString1(AS, s, 0, len(*s)-1, num)
 	if ID == 0 {
 	} //non sense
 	return MainPolicy, AS
 }
 
-func ParsePolicyString1(A *AccessStruct, s *string, startPos int, stopPos int,num int) (*PolicyNode, int) {
+func ParsePolicyString1(A *AccessStruct, s *string, startPos int, stopPos int, num int) (*PolicyNode, int) {
 	//leftPos := startPos+1+strings.Index((*s)[startPos+1:stopPos], "(")
 	log.Println(num)
 	this := NewPolicyNode("ThreshHold", 0)
@@ -75,14 +75,14 @@ func ParsePolicyString1(A *AccessStruct, s *string, startPos int, stopPos int,nu
 		}
 		_n = n
 		this.SetOperation(1)
-	} else if strings.Index(trueChild, "||") != -1 || num == 1{
+	} else if strings.Index(trueChild, "||") != -1 || num == 1 {
 		fmt.Printf("in OR Gate\n")
-		if num==1 {
-			childAttr = strings.Split(trueChild," ")
+		if num == 1 {
+			childAttr = strings.Split(trueChild, " ")
 		} else {
 			childAttr = strings.Split(trueChild, "||")
 		}
-// 		childAttr = strings.Split(trueChild, "||")
+		// 		childAttr = strings.Split(trueChild, "||")
 
 		for v := range childAttr {
 			if childAttr[v] != "" {
@@ -189,8 +189,8 @@ func ParsePolicyString2(A *AccessStruct, s *string, startPos int, stopPos int) (
 		fmt.Printf("Error:: bad description. \n")
 	} else {
 		this.SetChildren(policy_children) //设置这个门节点的子节点
-		this.SetMax(n) // 说明当前子节点个数
-		this.SetMin(_n) // 说明当前最少需要满足几个子节点，1代表OR，n代表AND
+		this.SetMax(n)                    // 说明当前子节点个数
+		this.SetMin(_n)                   // 说明当前最少需要满足几个子节点，1代表OR，n代表AND
 		A.A[ID][0] = n
 		A.A[ID][1] = _n
 	}

@@ -7,6 +7,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/Nik-U/pbc"
+	"github.com/vangogo/DecentralizedABE/model/AES"
+	"github.com/vangogo/DecentralizedABE/model/SM"
 	"github.com/vangogo/DecentralizedABE/model/sm4"
 	"github.com/vangogo/DecentralizedABE/model/sm4/padding"
 )
@@ -301,4 +303,39 @@ func (d *DABE) growNewPolicy(s string, p *pbc.Element, policy *Policy) {
 	policy.PolicyDescription = s
 	policy.Grow()
 	policy.AccessStruct.genElementLsssMatrix(p)
+}
+
+func (d *DABE) EncryptMen(m string, menpub []byte) (*MenCipher, error) {
+	fmt.Println("Threshold Encrypt start")
+	fmt.Println([]byte(menpub))
+	aesKey := d.EGG.NewFieldElement().Rand()
+	aesCipherText, err := AES.AesEncrypt([]byte(m), (aesKey.Bytes())[0:32])
+	if err != nil {
+		return nil, fmt.Errorf("AES encrypt error\n")
+	}
+	orgPubkey, err := SM.RawBytesToPublicKey([]byte(menpub))
+	if err != nil {
+		return nil, fmt.Errorf("recover menpub failed.\n")
+	}
+	Out, err := SM.Encrypt(orgPubkey, aesKey.Bytes(), 1)
+	if err != nil {
+		return nil, err
+	}
+	return &MenCipher{Out, aesCipherText}, nil
+}
+
+func (d *DABE) DecryptMen(cipher *MenCipher, menpriv []byte) ([]byte, error) {
+
+	priv, _ := SM.RawBytesToPrivateKey([]byte(menpriv))
+	decout, err := SM.Decrypt(priv, cipher.AeskeyEnc, 1)
+	if err != nil {
+		return nil, fmt.Errorf("SM2 decrypt failed.\n")
+	}
+
+	M, err := AES.AesDecrypt(cipher.CipherText, decout[0:32])
+	if err != nil || M == nil {
+		return nil, fmt.Errorf("aes error: decrypt failed.\n")
+	}
+	fmt.Println("Threhold Decrypt success.")
+	return M, nil
 }

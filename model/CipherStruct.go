@@ -20,3 +20,8 @@ type CipherSM4 struct {
 	CipherText []byte
 	Policy     string
 }
+
+type MenCipher struct {
+	AeskeyEnc  []byte
+	CipherText []byte
+}
